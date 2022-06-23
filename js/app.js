@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 import fragment from "./shader/fragment.glsl";
 import vertex from "./shader/vertexParticles.glsl";
@@ -46,11 +49,12 @@ export default class Sketch {
       this.geometry = gltf.scene.children[0].geometry;
       this.geometry.center();
 
-      this.addObjects();
-      this.resize();
-      this.render();
-      this.setupResize();
       this.settings();
+      this.addObjects();
+      this.initpost();
+      this.resize();
+      this.setupResize();
+      this.render();
     })
 
     // var frustumSize = 10;
@@ -66,13 +70,31 @@ export default class Sketch {
 
   }
 
+  initpost() {
+    this.renderScene = new RenderPass( this.scene, this.camera );
+
+    this.bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.9, 0.85 );
+
+
+
+    this.composer = new EffectComposer( this.renderer );
+    this.composer.addPass( this.renderScene );
+    this.composer.addPass( this.bloomPass );
+  }
+
   settings() {
     let that = this;
     this.settings = {
       progress: 0.6,
+      bloomThreshold: 0.08,
+      bloomStrength: 0.9,
+      bloomRadius: 0.85,
     };
     this.gui = new dat.GUI();
     this.gui.add(this.settings, "progress", 0, 6, 0.01);
+    this.gui.add(this.settings, "bloomThreshold", 0.01, 1.5, 0.01);
+    this.gui.add(this.settings, "bloomStrength", 0, 15, 0.01);
+    this.gui.add(this.settings, "bloomRadius", 0, 3, 0.01);
   }
 
   setupResize() {
@@ -83,6 +105,7 @@ export default class Sketch {
     this.width = this.container.offsetWidth;
     this.height = this.container.offsetHeight;
     this.renderer.setSize(this.width, this.height);
+    this.composer.setSize(this.width, this.height);
     this.camera.aspect = this.width / this.height;
     
 
@@ -168,9 +191,17 @@ export default class Sketch {
   render() {
     if (!this.isPlaying) return;
     this.time += 0.05;
+
+    this.mesh.rotation.y = -this.time/20;
+
+    this.bloomPass.threshold = this.settings.bloomThreshold;
+    this.bloomPass.strength = this.settings.bloomStrength;
+    this.bloomPass.radius = this.settings.bloomRadius;
+
     this.material.uniforms.time.value = this.time;
     requestAnimationFrame(this.render.bind(this));
-    this.renderer.render(this.scene, this.camera);
+    // this.renderer.render(this.scene, this.camera);
+    this.composer.render();
 
   }
 }

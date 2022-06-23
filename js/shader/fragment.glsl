@@ -23,7 +23,9 @@ void main()	{
 	if(v_random_color > 0.33 && v_random_color < 0.66) particle_color = uColor2;
 	if(v_random_color > 0.66) particle_color = uColor3;
 
+	float falloff_up_down = smoothstep(0.3, 0.5, vUv.y) * smoothstep(0.7, 0.5, vUv.y);
+
 	// gl_FragColor = vec4(particle_color,1.);
 	// gl_FragColor = vec4(vec3(circle), 1.);
-	gl_FragColor = vec4(particle_color, circle);
+	gl_FragColor = vec4(particle_color, circle * falloff_up_down);
 }
